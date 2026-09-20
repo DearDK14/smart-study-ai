@@ -1,5 +1,5 @@
 """Flashcard creation and mastery tracking service."""
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from services.ai_service import AIService
 from database.models import FlashcardModel, DocumentModel, UserStatsModel
 from utils.validators import validate_flashcard_data
@@ -7,11 +7,14 @@ from config.settings import XP_PER_FLASHCARD_STUDIED
 
 class FlashcardService:
     @classmethod
-    def generate_flashcards_for_document(cls, document_id: int, deck_name: str = None, count: int = 6) -> Dict[str, Any]:
+    def generate_flashcards_for_document(cls, document_id: int, deck_name: str = None, count: int = 6, user_id: Optional[int] = None) -> Dict[str, Any]:
         """Generates flashcards for a document and saves them to SQLite."""
         doc = DocumentModel.get_by_id(document_id)
         if not doc:
             return {"success": False, "error": f"Document ID {document_id} not found."}
+
+        if user_id is None and "user_id" in doc:
+            user_id = doc.get("user_id")
 
         text = doc["extracted_text"]
         if not text or len(text.strip()) < 30:
@@ -55,6 +58,7 @@ class FlashcardService:
         for c in raw_cards:
             c["document_id"] = document_id
             c["deck_name"] = deck_name
+            c["user_id"] = user_id
             is_valid, _ = validate_flashcard_data(c)
             if is_valid:
                 valid_cards.append(c)
@@ -62,7 +66,7 @@ class FlashcardService:
         if not valid_cards:
             return {"success": False, "error": "Failed to create flashcards."}
 
-        card_ids = FlashcardModel.bulk_create(valid_cards)
+        card_ids = FlashcardModel.bulk_create(valid_cards, user_id=user_id)
 
         return {
             "success": True,
@@ -73,14 +77,14 @@ class FlashcardService:
         }
 
     @classmethod
-    def record_card_review(cls, card_id: int, mastery_status: str) -> Dict[str, Any]:
+    def record_card_review(cls, card_id: int, mastery_status: str, user_id: Optional[int] = None) -> Dict[str, Any]:
         """Update flashcard mastery status and award XP."""
         valid_statuses = {"learning", "reviewing", "mastered"}
         if mastery_status not in valid_statuses:
             mastery_status = "reviewing"
             
         FlashcardModel.update_mastery(card_id, mastery_status)
-        UserStatsModel.add_xp(XP_PER_FLASHCARD_STUDIED)
+        UserStatsModel.add_xp(XP_PER_FLASHCARD_STUDIED, user_id=user_id)
 
         return {
             "success": True,

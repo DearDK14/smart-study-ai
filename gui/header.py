@@ -17,6 +17,8 @@ class Header(ctk.CTkFrame):
         self.pack_propagate(False)
         self.on_theme_toggle = on_theme_toggle
         self.on_logout = on_logout
+        self.user_id = None
+        self.user_name = "Student"
         
         # Left side: Current Page Title & Subtitle
         self.left_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -80,7 +82,7 @@ class Header(ctk.CTkFrame):
         
         self.avatar_label = ctk.CTkLabel(
             self.user_pill,
-            text=" 👤 Tan ",
+            text=" 👤 Student ",
             font=FONTS["body_bold"],
             text_color=(COLORS["primary"], COLORS["text_light"]),
         )
@@ -89,7 +91,7 @@ class Header(ctk.CTkFrame):
         # Level Pill
         self.level_label = ctk.CTkLabel(
             self.right_frame,
-            text="⭐ Level 11",
+            text="⭐ Level 1",
             font=FONTS["small"],
             fg_color=(COLORS["warning_light"], "#78350f"),
             text_color=(COLORS["warning"], "#fef3c7"),
@@ -102,7 +104,7 @@ class Header(ctk.CTkFrame):
         # XP Pill
         self.xp_label = ctk.CTkLabel(
             self.right_frame,
-            text="⚡ 11,735 XP",
+            text="⚡ 0 XP",
             font=FONTS["small"],
             fg_color=(COLORS["primary_light"], "#1e3a8a"),
             text_color=(COLORS["primary"], "#93c5fd"),
@@ -112,28 +114,37 @@ class Header(ctk.CTkFrame):
         )
         self.xp_label.pack(side="right", padx=(0, 0), pady=16)
 
-        self.update_user_stats()
-
     def set_title(self, title: str, subtitle: str = ""):
         """Update active section title and subtitle."""
         self.title_label.configure(text=title)
         if subtitle:
             self.subtitle_label.configure(text=subtitle)
 
-    def update_user_stats(self):
+    def set_user(self, user: dict):
+        """Update active user state, avatar label and refresh stats."""
+        if not user:
+            return
+        self.user_id = user.get("id")
+        self.user_name = user.get("name", "Student")
+        self.avatar_label.configure(text=f" 👤 {self.user_name} ")
+        self.update_user_stats(self.user_id)
+
+    def set_user_name(self, name: str):
+        """Update user avatar pill with logged in user name."""
+        self.user_name = name
+        self.avatar_label.configure(text=f" 👤 {name} ")
+
+    def update_user_stats(self, user_id=None):
         """Fetch real user stats from SQLite and refresh labels."""
         try:
-            stats = UserStatsModel.get()
-            xp = stats.get("xp_total", 11735)
-            level = stats.get("level", 11)
+            uid = user_id if user_id is not None else self.user_id
+            stats = UserStatsModel.get(user_id=uid)
+            xp = stats.get("xp_total", 0)
+            level = stats.get("level", 1)
             self.xp_label.configure(text=f"⚡ {xp:,} XP")
             self.level_label.configure(text=f"⭐ Level {level}")
         except Exception:
             pass
-
-    def set_user_name(self, name: str):
-        """Update user avatar pill with logged in user name."""
-        self.avatar_label.configure(text=f" 👤 {name} ")
 
     def _handle_logout(self):
         if self.on_logout:

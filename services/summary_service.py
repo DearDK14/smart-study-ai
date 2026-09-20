@@ -6,11 +6,14 @@ from config.settings import XP_PER_SUMMARY_READ
 
 class SummaryService:
     @classmethod
-    def generate_and_save(cls, document_id: int, summary_type: str = "executive") -> Dict[str, Any]:
+    def generate_and_save(cls, document_id: int, summary_type: str = "executive", user_id: Optional[int] = None) -> Dict[str, Any]:
         """Generates summary for a document and persists it in SQLite."""
         doc = DocumentModel.get_by_id(document_id)
         if not doc:
             return {"success": False, "error": f"Document ID {document_id} not found."}
+
+        if user_id is None and "user_id" in doc:
+            user_id = doc.get("user_id")
 
         text = doc["extracted_text"]
         if not text or len(text.strip()) < 30:
@@ -51,10 +54,11 @@ class SummaryService:
             summary_type=summary_type,
             content=summary_result["summary"],
             key_takeaways=summary_result["takeaways"],
+            user_id=user_id,
         )
 
         # Award study XP
-        UserStatsModel.add_xp(XP_PER_SUMMARY_READ)
+        UserStatsModel.add_xp(XP_PER_SUMMARY_READ, user_id=user_id)
 
         return {
             "success": True,
@@ -66,5 +70,5 @@ class SummaryService:
         }
 
     @classmethod
-    def get_document_summaries(cls, document_id: int):
-        return SummaryModel.get_by_document(document_id)
+    def get_document_summaries(cls, document_id: int, user_id: Optional[int] = None):
+        return SummaryModel.get_by_document(document_id, user_id=user_id)

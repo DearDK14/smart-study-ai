@@ -1,5 +1,5 @@
 """Question and Quiz management service."""
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from services.ai_service import AIService
 from database.models import QuestionModel, QuizModel, QuizAttemptModel, DocumentModel, UserStatsModel
 from utils.validators import validate_question_data
@@ -11,11 +11,14 @@ from config.settings import (
 
 class QuestionService:
     @classmethod
-    def generate_questions_for_document(cls, document_id: int, count: int = 5) -> Dict[str, Any]:
+    def generate_questions_for_document(cls, document_id: int, count: int = 5, user_id: Optional[int] = None) -> Dict[str, Any]:
         """Generates quiz questions for a document and saves them to the DB."""
         doc = DocumentModel.get_by_id(document_id)
         if not doc:
             return {"success": False, "error": f"Document ID {document_id} not found."}
+
+        if user_id is None and "user_id" in doc:
+            user_id = doc.get("user_id")
 
         text = doc["extracted_text"]
         if not text or len(text.strip()) < 30:
@@ -33,7 +36,6 @@ class QuestionService:
             api_resp = AIService.call_gemini(prompt)
             if api_resp:
                 try:
-                    # Clean markdown code blocks if any
                     cleaned_json = api_resp.strip()
                     if cleaned_json.startswith("```json"):
                         cleaned_json = cleaned_json[7:]
@@ -56,6 +58,7 @@ class QuestionService:
         valid_questions = []
         for q in raw_questions:
             q["document_id"] = document_id
+            q["user_id"] = user_id
             is_valid, _ = validate_question_data(q)
             if is_valid:
                 valid_questions.append(q)
@@ -64,11 +67,11 @@ class QuestionService:
             return {"success": False, "error": "Failed to formulate valid questions from document."}
 
         # Save to database
-        q_ids = QuestionModel.bulk_create(valid_questions)
+        q_ids = QuestionModel.bulk_create(valid_questions, user_id=user_id)
         
         # Create an associated Quiz
         quiz_title = f"{doc['title']} Mastery Quiz"
-        quiz_id = QuizModel.create(quiz_title, document_id, q_ids)
+        quiz_id = QuizModel.create(quiz_title, document_id, q_ids, user_id=user_id)
 
         return {
             "success": True,
@@ -79,11 +82,14 @@ class QuestionService:
         }
 
     @classmethod
-    def evaluate_quiz_submission(cls, quiz_id: int, user_answers: Dict[int, str]) -> Dict[str, Any]:
+    def evaluate_quiz_submission(cls, quiz_id: int, user_answers: Dict[int, str], user_id: Optional[int] = None) -> Dict[str, Any]:
         """Evaluates submitted answers, detects weak topics, and records attempt."""
         quiz = QuizModel.get_by_id(quiz_id)
         if not quiz:
             return {"success": False, "error": "Quiz not found."}
+
+        if user_id is None and "user_id" in quiz:
+            user_id = quiz.get("user_id")
 
         questions = QuestionModel.get_by_ids(quiz["question_ids"])
         score = 0
@@ -121,7 +127,7 @@ class QuestionService:
         weak_topics = []
         topic_accuracy = {}
         for topic, stat in topic_stats.items():
-            acc = round((stat["correct"] / stat["total"]) * 100, 1)
+            acc = round((stat["correct"] / stat["total"]) * 100, 1) if stat["total"] > 0 else 0.0
             topic_accuracy[topic] = acc
             if acc < WEAK_TOPIC_ACCURACY_THRESHOLD:
                 weak_topics.append({
@@ -133,7 +139,7 @@ class QuestionService:
 
         # Calculate XP gained
         xp_earned = XP_PER_QUIZ_COMPLETED + (score * XP_PER_CORRECT_ANSWER)
-        UserStatsModel.add_xp(xp_earned)
+        UserStatsModel.add_xp(xp_earned, user_id=user_id)
 
         # Save Attempt Record
         attempt_id = QuizAttemptModel.record_attempt(
@@ -143,6 +149,7 @@ class QuestionService:
             answers=detailed_answers,
             weak_topics=weak_topics,
             xp_earned=xp_earned,
+            user_id=user_id,
         )
 
         percentage = round((score / total) * 100, 1) if total > 0 else 0.0

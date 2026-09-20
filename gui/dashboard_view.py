@@ -11,9 +11,12 @@ from database.models import (
 from utils.helpers import calculate_xp_for_level
 
 class DashboardView(ctk.CTkScrollableFrame):
-    def __init__(self, master, navigate_fn, **kwargs):
+    def __init__(self, master, navigate_fn, user=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.navigate_fn = navigate_fn
+        self.user = user or {}
+        self.user_id = self.user.get("id")
+        user_display_name = self.user.get("name", "Student")
 
         # 1. Hero Greeting Banner Card
         self.hero_card = ctk.CTkFrame(
@@ -27,7 +30,7 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         self.hero_title = ctk.CTkLabel(
             self.hero_card,
-            text="Good morning, Tan 👋",
+            text=f"Good morning, {user_display_name} 👋",
             font=FONTS["title"],
             text_color=(COLORS["text_dark"], COLORS["text_light"]),
         )
@@ -35,7 +38,7 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         self.hero_subtitle = ctk.CTkLabel(
             self.hero_card,
-            text="Welcome to StudyForge AI. Review your progress, study flashcards, and master exam topics today.",
+            text="Welcome to StudyForge AI. Upload a document to auto-generate summaries, quizzes, and flashcards.",
             font=FONTS["body"],
             text_color=COLORS["text_muted"],
         )
@@ -51,15 +54,17 @@ class DashboardView(ctk.CTkScrollableFrame):
         )
         self.xp_container.pack(fill="x", padx=24, pady=(0, 20))
 
-        stats = UserStatsModel.get()
-        xp_info = calculate_xp_for_level(stats.get("xp_total", 11735))
+        stats = UserStatsModel.get(user_id=self.user_id)
+        current_xp = stats.get("xp_total", 0)
+        current_lvl = stats.get("level", 1)
+        xp_info = calculate_xp_for_level(current_xp)
 
         self.xp_header = ctk.CTkFrame(self.xp_container, fg_color="transparent")
         self.xp_header.pack(fill="x", padx=16, pady=(12, 6))
 
         self.level_badge = ctk.CTkLabel(
             self.xp_header,
-            text=f"⭐ Level {stats.get('level', 11)} Student",
+            text=f"⭐ Level {current_lvl} Student",
             font=FONTS["body_bold"],
             text_color=COLORS["primary"],
         )
@@ -67,7 +72,7 @@ class DashboardView(ctk.CTkScrollableFrame):
 
         self.xp_fraction = ctk.CTkLabel(
             self.xp_header,
-            text=f"{xp_info['xp_in_level']} / {xp_info['xp_needed']} XP to Level {stats.get('level', 11) + 1}",
+            text=f"{xp_info['xp_in_level']} / {xp_info['xp_needed']} XP to Level {current_lvl + 1}",
             font=FONTS["small"],
             text_color=COLORS["text_muted"],
         )
@@ -83,15 +88,15 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.xp_bar.pack(fill="x", padx=16, pady=(0, 14))
         self.xp_bar.set(xp_info["progress_percentage"] / 100.0)
 
-        # 2. Key Metrics Grid (4 Stat Cards)
+        # 2. Key Metrics Grid (4 Stat Cards - Scoped to this user)
         self.metrics_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.metrics_frame.pack(fill="x", padx=16, pady=(0, 16))
         self.metrics_frame.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="metric")
 
-        docs = DocumentModel.get_all()
-        summaries = SummaryModel.get_all()
-        attempts = QuizAttemptModel.get_all()
-        cards = FlashcardModel.get_all()
+        docs = DocumentModel.get_all(user_id=self.user_id)
+        summaries = SummaryModel.get_all(user_id=self.user_id)
+        attempts = QuizAttemptModel.get_all(user_id=self.user_id)
+        cards = FlashcardModel.get_all(user_id=self.user_id)
 
         self._create_stat_card(0, "📚 Documents", len(docs), "Processed Notes", COLORS["primary"], COLORS["primary_light"])
         self._create_stat_card(1, "📑 Summaries", len(summaries), "AI Insights", "#059669", "#d1fae5")
@@ -121,10 +126,10 @@ class DashboardView(ctk.CTkScrollableFrame):
         self.btn_row.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="action")
 
         actions = [
-            ("📤 Upload Notes", "My Documents", COLORS["primary"]),
-            ("✨ Generate Summary", "AI Summaries", "#059669"),
-            ("❓ Create Questions", "Question Generator", "#d97706"),
-            ("🎯 Start Quiz", "Quiz", "#7c3aed"),
+            ("📤 Upload & Process", "My Documents", COLORS["primary"]),
+            ("✨ AI Summaries", "AI Summaries", "#059669"),
+            ("❓ Question Studio", "Question Generator", "#d97706"),
+            ("🎯 Take Quiz", "Quiz", "#7c3aed"),
         ]
 
         for col_idx, (text, page_target, btn_color) in enumerate(actions):
@@ -161,13 +166,12 @@ class DashboardView(ctk.CTkScrollableFrame):
         if not attempts and not docs:
             self.empty_label = ctk.CTkLabel(
                 self.activity_card,
-                text="No recent activity yet. Upload a document or take a quiz to start building your study history!",
+                text="No recent activity yet. Upload a document to auto-generate summaries, quizzes, and flashcards!",
                 font=FONTS["body"],
                 text_color=COLORS["text_muted"],
             )
             self.empty_label.pack(anchor="w", padx=20, pady=(0, 18))
         else:
-            # Display last 3 attempts or documents
             for a in attempts[:3]:
                 item_frame = ctk.CTkFrame(
                     self.activity_card,

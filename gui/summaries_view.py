@@ -7,9 +7,11 @@ from database.models import DocumentModel, SummaryModel
 from services.summary_service import SummaryService
 
 class SummariesView(ctk.CTkScrollableFrame):
-    def __init__(self, master, navigate_fn, **kwargs):
+    def __init__(self, master, navigate_fn, user=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.navigate_fn = navigate_fn
+        self.user = user or {}
+        self.user_id = self.user.get("id")
 
         # 1. Top Control Card
         self.control_card = ctk.CTkFrame(
@@ -41,7 +43,7 @@ class SummariesView(ctk.CTkScrollableFrame):
         self.sel_row = ctk.CTkFrame(self.control_card, fg_color="transparent")
         self.sel_row.pack(fill="x", padx=20, pady=(0, 14))
 
-        self.docs_list = DocumentModel.get_all()
+        self.docs_list = DocumentModel.get_all(user_id=self.user_id)
         self.doc_map = {d["id"]: d["title"] for d in self.docs_list}
         options = [d["title"] for d in self.docs_list] if self.docs_list else ["No documents available"]
 
@@ -172,7 +174,7 @@ class SummariesView(ctk.CTkScrollableFrame):
 
     def _generate_worker(self, doc_id: int, summary_type: str):
         try:
-            res = SummaryService.generate_and_save(doc_id, summary_type)
+            res = SummaryService.generate_and_save(doc_id, summary_type, user_id=self.user_id)
             self.after(0, lambda: self._on_generate_complete(res))
         except Exception as e:
             self.after(0, lambda: self._on_generate_error(str(e)))
@@ -211,7 +213,7 @@ class SummariesView(ctk.CTkScrollableFrame):
         for w in self.history_container.winfo_children():
             w.destroy()
 
-        summaries = SummaryModel.get_all()
+        summaries = SummaryModel.get_all(user_id=self.user_id)
         if not summaries:
             lbl = ctk.CTkLabel(
                 self.history_container,

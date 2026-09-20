@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     filename TEXT NOT NULL,
     filepath TEXT NOT NULL,
     title TEXT NOT NULL,
@@ -24,16 +25,17 @@ CREATE TABLE IF NOT EXISTS documents (
 
 CREATE TABLE IF NOT EXISTS summaries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     document_id INTEGER NOT NULL,
     summary_type TEXT DEFAULT 'executive',
     content TEXT NOT NULL,
     key_takeaways TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE CASCADE
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS questions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     document_id INTEGER,
     topic TEXT NOT NULL DEFAULT 'General',
     question_text TEXT NOT NULL,
@@ -44,22 +46,22 @@ CREATE TABLE IF NOT EXISTS questions (
     correct_option TEXT NOT NULL, -- 'A', 'B', 'C', or 'D'
     explanation TEXT,
     difficulty TEXT DEFAULT 'Medium',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE SET NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS quizzes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     title TEXT NOT NULL,
     document_id INTEGER,
     question_ids_json TEXT NOT NULL,
     total_questions INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE SET NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS quiz_attempts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     quiz_id INTEGER,
     score INTEGER NOT NULL,
     total_questions INTEGER NOT NULL,
@@ -67,12 +69,12 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
     answers_json TEXT NOT NULL,
     weak_topics_json TEXT,
     xp_earned INTEGER DEFAULT 0,
-    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (quiz_id) REFERENCES quizzes (id) ON DELETE SET NULL
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS flashcards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     document_id INTEGER,
     deck_name TEXT NOT NULL DEFAULT 'Default Deck',
     topic TEXT NOT NULL DEFAULT 'General',
@@ -80,33 +82,29 @@ CREATE TABLE IF NOT EXISTS flashcards (
     back_text TEXT NOT NULL,
     mastery_level TEXT DEFAULT 'learning',
     reviews_count INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE SET NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS user_stats (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    xp_total INTEGER DEFAULT 11735,
-    level INTEGER DEFAULT 11,
-    streak_days INTEGER DEFAULT 1,
-    gems INTEGER DEFAULT 250,
-    tasks_pending INTEGER DEFAULT 1,
-    focus_minutes_total INTEGER DEFAULT 120,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE,
+    xp_total INTEGER DEFAULT 0,
+    level INTEGER DEFAULT 1,
+    streak_days INTEGER DEFAULT 0,
+    gems INTEGER DEFAULT 0,
+    tasks_pending INTEGER DEFAULT 0,
+    focus_minutes_total INTEGER DEFAULT 0,
     last_active_date TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS notebook (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     tags TEXT DEFAULT 'General',
     document_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE SET NULL
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Default user stats
-INSERT OR IGNORE INTO user_stats (id, xp_total, level, streak_days, gems, tasks_pending, focus_minutes_total, last_active_date)
-VALUES (1, 11735, 11, 1, 250, 1, 120, DATE('now'));

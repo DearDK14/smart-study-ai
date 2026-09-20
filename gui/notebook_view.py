@@ -5,9 +5,11 @@ from gui.theme import COLORS, FONTS
 from database.models import NoteModel, DocumentModel
 
 class NotebookView(ctk.CTkScrollableFrame):
-    def __init__(self, master, navigate_fn, **kwargs):
+    def __init__(self, master, navigate_fn, user=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.navigate_fn = navigate_fn
+        self.user = user or {}
+        self.user_id = self.user.get("id")
 
         # 1. Top Note Editor Card
         self.editor_card = ctk.CTkFrame(
@@ -111,7 +113,7 @@ class NotebookView(ctk.CTkScrollableFrame):
             messagebox.showwarning("Warning", "Note content cannot be empty.")
             return
 
-        NoteModel.create(title=title, content=content, tags=tags)
+        NoteModel.create(title=title, content=content, tags=tags, user_id=self.user_id)
         self.title_entry.delete(0, "end")
         self.tag_entry.delete(0, "end")
         self.content_text.delete("1.0", "end")
@@ -123,7 +125,7 @@ class NotebookView(ctk.CTkScrollableFrame):
             w.destroy()
 
         query = self.search_entry.get().strip().lower()
-        all_notes = NoteModel.get_all()
+        all_notes = NoteModel.get_all(user_id=self.user_id)
 
         if query:
             filtered = [n for n in all_notes if query in n["title"].lower() or query in n["content"].lower() or query in n.get("tags", "").lower()]

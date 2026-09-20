@@ -7,9 +7,11 @@ from database.models import DocumentModel, QuestionModel
 from services.question_service import QuestionService
 
 class QuestionsView(ctk.CTkScrollableFrame):
-    def __init__(self, master, navigate_fn, **kwargs):
+    def __init__(self, master, navigate_fn, user=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.navigate_fn = navigate_fn
+        self.user = user or {}
+        self.user_id = self.user.get("id")
 
         # 1. Top Generator Setup Card
         self.config_card = ctk.CTkFrame(
@@ -41,7 +43,7 @@ class QuestionsView(ctk.CTkScrollableFrame):
         self.cfg_row = ctk.CTkFrame(self.config_card, fg_color="transparent")
         self.cfg_row.pack(fill="x", padx=20, pady=(0, 14))
 
-        self.docs_list = DocumentModel.get_all()
+        self.docs_list = DocumentModel.get_all(user_id=self.user_id)
         self.doc_map = {d["id"]: d["title"] for d in self.docs_list}
         options = [d["title"] for d in self.docs_list] if self.docs_list else ["No documents available"]
 
@@ -170,7 +172,7 @@ class QuestionsView(ctk.CTkScrollableFrame):
 
     def _generate_questions_worker(self, doc_id: int, count: int):
         try:
-            res = QuestionService.generate_questions_for_document(doc_id, count=count)
+            res = QuestionService.generate_questions_for_document(doc_id, count=count, user_id=self.user_id)
             self.after(0, lambda: self._on_questions_complete(res))
         except Exception as e:
             self.after(0, lambda: self._on_questions_error(str(e)))
@@ -193,7 +195,7 @@ class QuestionsView(ctk.CTkScrollableFrame):
         for w in self.questions_container.winfo_children():
             w.destroy()
 
-        questions = QuestionModel.get_all()
+        questions = QuestionModel.get_all(user_id=self.user_id)
         if not questions:
             lbl = ctk.CTkLabel(
                 self.questions_container,

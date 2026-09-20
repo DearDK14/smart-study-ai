@@ -207,10 +207,12 @@ class SettingsView(ctk.CTkScrollableFrame):
             self.on_theme_toggle(mode)
 
     def _reset_database(self):
-        if messagebox.askyesno("Confirm Database Reset", "Are you sure you want to reset the database? All documents, quizzes, notes, and study stats will be restored to defaults."):
+        if messagebox.askyesno("Confirm Database Reset", "Are you sure you want to reset the database? All documents, quizzes, notes, and study stats will be restored to clean defaults."):
             try:
+                from database.connection import clear_all_study_data
+                clear_all_study_data()
                 init_db()
-                messagebox.showinfo("Reset Complete", "Database successfully reinitialized!")
+                messagebox.showinfo("Reset Complete", "Database successfully cleaned and reinitialized!")
                 self.navigate_fn("Dashboard")
             except Exception as e:
                 messagebox.showerror("Reset Error", str(e))

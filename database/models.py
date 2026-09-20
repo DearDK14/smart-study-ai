@@ -5,15 +5,15 @@ from database.connection import get_db_connection
 
 class DocumentModel:
     @staticmethod
-    def create(filename, filepath, title, file_type, file_size, page_count, word_count, extracted_text):
+    def create(filename, filepath, title, file_type, file_size, page_count, word_count, extracted_text, user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO documents (filename, filepath, title, file_type, file_size, page_count, word_count, extracted_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO documents (filename, filepath, title, file_type, file_size, page_count, word_count, extracted_text, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (filename, str(filepath), title, file_type, file_size, page_count, word_count, extracted_text),
+            (filename, str(filepath), title, file_type, file_size, page_count, word_count, extracted_text, user_id),
         )
         doc_id = cursor.lastrowid
         conn.commit()
@@ -21,9 +21,12 @@ class DocumentModel:
         return doc_id
 
     @staticmethod
-    def get_all():
+    def get_all(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute("SELECT * FROM documents ORDER BY created_at DESC").fetchall()
+        if user_id is not None:
+            rows = conn.execute("SELECT * FROM documents WHERE user_id = ? ORDER BY created_at DESC", (user_id,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM documents ORDER BY created_at DESC").fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
@@ -44,15 +47,15 @@ class DocumentModel:
 
 class SummaryModel:
     @staticmethod
-    def create(document_id, summary_type, content, key_takeaways=""):
+    def create(document_id, summary_type, content, key_takeaways="", user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO summaries (document_id, summary_type, content, key_takeaways)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO summaries (document_id, summary_type, content, key_takeaways, user_id)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (document_id, summary_type, content, key_takeaways),
+            (document_id, summary_type, content, key_takeaways, user_id),
         )
         summary_id = cursor.lastrowid
         conn.commit()
@@ -60,41 +63,59 @@ class SummaryModel:
         return summary_id
 
     @staticmethod
-    def get_by_document(document_id):
+    def get_by_document(document_id, user_id=None):
         conn = get_db_connection()
-        rows = conn.execute(
-            "SELECT * FROM summaries WHERE document_id = ? ORDER BY created_at DESC",
-            (document_id,),
-        ).fetchall()
+        if user_id is not None:
+            rows = conn.execute(
+                "SELECT * FROM summaries WHERE document_id = ? AND user_id = ? ORDER BY created_at DESC",
+                (document_id, user_id),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM summaries WHERE document_id = ? ORDER BY created_at DESC",
+                (document_id,),
+            ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
     @staticmethod
-    def get_all():
+    def get_all(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute(
-            """
-            SELECT s.*, d.title as doc_title 
-            FROM summaries s 
-            LEFT JOIN documents d ON s.document_id = d.id 
-            ORDER BY s.created_at DESC
-            """
-        ).fetchall()
+        if user_id is not None:
+            rows = conn.execute(
+                """
+                SELECT s.*, d.title as doc_title 
+                FROM summaries s 
+                LEFT JOIN documents d ON s.document_id = d.id 
+                WHERE s.user_id = ?
+                ORDER BY s.created_at DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT s.*, d.title as doc_title 
+                FROM summaries s 
+                LEFT JOIN documents d ON s.document_id = d.id 
+                ORDER BY s.created_at DESC
+                """
+            ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
 
 class QuestionModel:
     @staticmethod
-    def create(document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation="", difficulty="Medium"):
+    def create(document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation="", difficulty="Medium", user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO questions (document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO questions (document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option.upper(), explanation, difficulty),
+            (document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option.upper(), explanation, difficulty, user_id),
         )
         q_id = cursor.lastrowid
         conn.commit()
@@ -102,15 +123,16 @@ class QuestionModel:
         return q_id
 
     @staticmethod
-    def bulk_create(questions_list):
+    def bulk_create(questions_list, user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         ids = []
         for q in questions_list:
+            uid = q.get("user_id", user_id)
             cursor.execute(
                 """
-                INSERT INTO questions (document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO questions (document_id, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     q.get("document_id"),
@@ -123,6 +145,7 @@ class QuestionModel:
                     q.get("correct_option", "A").upper(),
                     q.get("explanation", ""),
                     q.get("difficulty", "Medium"),
+                    uid,
                 ),
             )
             ids.append(cursor.lastrowid)
@@ -148,24 +171,27 @@ class QuestionModel:
         return [dict(r) for r in rows]
 
     @staticmethod
-    def get_all():
+    def get_all(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute("SELECT * FROM questions ORDER BY created_at DESC").fetchall()
+        if user_id is not None:
+            rows = conn.execute("SELECT * FROM questions WHERE user_id = ? ORDER BY created_at DESC", (user_id,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM questions ORDER BY created_at DESC").fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
 
 class QuizModel:
     @staticmethod
-    def create(title, document_id, question_ids):
+    def create(title, document_id, question_ids, user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO quizzes (title, document_id, question_ids_json, total_questions)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO quizzes (title, document_id, question_ids_json, total_questions, user_id)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (title, document_id, json.dumps(question_ids), len(question_ids)),
+            (title, document_id, json.dumps(question_ids), len(question_ids), user_id),
         )
         quiz_id = cursor.lastrowid
         conn.commit()
@@ -173,16 +199,28 @@ class QuizModel:
         return quiz_id
 
     @staticmethod
-    def get_all():
+    def get_all(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute(
-            """
-            SELECT q.*, d.title as doc_title 
-            FROM quizzes q 
-            LEFT JOIN documents d ON q.document_id = d.id 
-            ORDER BY q.created_at DESC
-            """
-        ).fetchall()
+        if user_id is not None:
+            rows = conn.execute(
+                """
+                SELECT q.*, d.title as doc_title 
+                FROM quizzes q 
+                LEFT JOIN documents d ON q.document_id = d.id 
+                WHERE q.user_id = ?
+                ORDER BY q.created_at DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT q.*, d.title as doc_title 
+                FROM quizzes q 
+                LEFT JOIN documents d ON q.document_id = d.id 
+                ORDER BY q.created_at DESC
+                """
+            ).fetchall()
         conn.close()
         result = []
         for r in rows:
@@ -205,16 +243,16 @@ class QuizModel:
 
 class QuizAttemptModel:
     @staticmethod
-    def record_attempt(quiz_id, score, total_questions, answers, weak_topics, xp_earned):
+    def record_attempt(quiz_id, score, total_questions, answers, weak_topics, xp_earned, user_id=None):
         percentage = round((score / total_questions) * 100, 1) if total_questions > 0 else 0.0
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO quiz_attempts (quiz_id, score, total_questions, percentage, answers_json, weak_topics_json, xp_earned)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO quiz_attempts (quiz_id, score, total_questions, percentage, answers_json, weak_topics_json, xp_earned, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (quiz_id, score, total_questions, percentage, json.dumps(answers), json.dumps(weak_topics), xp_earned),
+            (quiz_id, score, total_questions, percentage, json.dumps(answers), json.dumps(weak_topics), xp_earned, user_id),
         )
         attempt_id = cursor.lastrowid
         conn.commit()
@@ -222,9 +260,12 @@ class QuizAttemptModel:
         return attempt_id
 
     @staticmethod
-    def get_all():
+    def get_all(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute("SELECT * FROM quiz_attempts ORDER BY completed_at DESC").fetchall()
+        if user_id is not None:
+            rows = conn.execute("SELECT * FROM quiz_attempts WHERE user_id = ? ORDER BY completed_at DESC", (user_id,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM quiz_attempts ORDER BY completed_at DESC").fetchall()
         conn.close()
         results = []
         for r in rows:
@@ -237,15 +278,15 @@ class QuizAttemptModel:
 
 class FlashcardModel:
     @staticmethod
-    def create(document_id, deck_name, topic, front_text, back_text):
+    def create(document_id, deck_name, topic, front_text, back_text, user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO flashcards (document_id, deck_name, topic, front_text, back_text)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO flashcards (document_id, deck_name, topic, front_text, back_text, user_id)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (document_id, deck_name, topic, front_text, back_text),
+            (document_id, deck_name, topic, front_text, back_text, user_id),
         )
         card_id = cursor.lastrowid
         conn.commit()
@@ -253,17 +294,18 @@ class FlashcardModel:
         return card_id
 
     @staticmethod
-    def bulk_create(cards_list):
+    def bulk_create(cards_list, user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         ids = []
         for c in cards_list:
+            uid = c.get("user_id", user_id)
             cursor.execute(
                 """
-                INSERT INTO flashcards (document_id, deck_name, topic, front_text, back_text)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO flashcards (document_id, deck_name, topic, front_text, back_text, user_id)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (c.get("document_id"), c.get("deck_name", "General"), c.get("topic", "General"), c.get("front_text"), c.get("back_text")),
+                (c.get("document_id"), c.get("deck_name", "General"), c.get("topic", "General"), c.get("front_text"), c.get("back_text"), uid),
             )
             ids.append(cursor.lastrowid)
         conn.commit()
@@ -271,23 +313,38 @@ class FlashcardModel:
         return ids
 
     @staticmethod
-    def get_decks():
+    def get_decks(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute(
-            """
-            SELECT deck_name, COUNT(*) as card_count, 
-                   SUM(CASE WHEN mastery_level = 'mastered' THEN 1 ELSE 0 END) as mastered_count
-            FROM flashcards 
-            GROUP BY deck_name
-            """
-        ).fetchall()
+        if user_id is not None:
+            rows = conn.execute(
+                """
+                SELECT deck_name, COUNT(*) as card_count, 
+                       SUM(CASE WHEN mastery_level = 'mastered' THEN 1 ELSE 0 END) as mastered_count
+                FROM flashcards 
+                WHERE user_id = ?
+                GROUP BY deck_name
+                """,
+                (user_id,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT deck_name, COUNT(*) as card_count, 
+                       SUM(CASE WHEN mastery_level = 'mastered' THEN 1 ELSE 0 END) as mastered_count
+                FROM flashcards 
+                GROUP BY deck_name
+                """
+            ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
     @staticmethod
-    def get_by_deck(deck_name):
+    def get_by_deck(deck_name, user_id=None):
         conn = get_db_connection()
-        rows = conn.execute("SELECT * FROM flashcards WHERE deck_name = ? ORDER BY id ASC", (deck_name,)).fetchall()
+        if user_id is not None:
+            rows = conn.execute("SELECT * FROM flashcards WHERE deck_name = ? AND user_id = ? ORDER BY id ASC", (deck_name, user_id)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM flashcards WHERE deck_name = ? ORDER BY id ASC", (deck_name,)).fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
@@ -302,53 +359,101 @@ class FlashcardModel:
         conn.close()
 
     @staticmethod
-    def get_all():
+    def get_all(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute("SELECT * FROM flashcards ORDER BY created_at DESC").fetchall()
+        if user_id is not None:
+            rows = conn.execute("SELECT * FROM flashcards WHERE user_id = ? ORDER BY created_at DESC", (user_id,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM flashcards ORDER BY created_at DESC").fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
 
 class UserStatsModel:
     @staticmethod
-    def get():
+    def get(user_id=None):
         conn = get_db_connection()
-        row = conn.execute("SELECT * FROM user_stats WHERE id = 1").fetchone()
-        conn.close()
-        return dict(row) if row else {
-            "id": 1,
-            "xp_total": 11735,
-            "level": 11,
-            "streak_days": 1,
-            "gems": 250,
-            "tasks_pending": 1,
-            "focus_minutes_total": 120,
-        }
+        try:
+            # Treat 0 or None as general/guest
+            if user_id is not None and user_id != 0:
+                row = conn.execute("SELECT * FROM user_stats WHERE user_id = ?", (user_id,)).fetchone()
+                if row:
+                    return dict(row)
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO user_stats (user_id, xp_total, level, streak_days, gems, tasks_pending, focus_minutes_total, last_active_date)
+                    VALUES (?, 0, 1, 0, 0, 0, 0, DATE('now'))
+                    """,
+                    (user_id,),
+                )
+                conn.commit()
+                new_row = conn.execute("SELECT * FROM user_stats WHERE user_id = ?", (user_id,)).fetchone()
+                return dict(new_row) if new_row else {"user_id": user_id, "xp_total": 0, "level": 1, "streak_days": 0, "gems": 0, "tasks_pending": 0, "focus_minutes_total": 0}
+            else:
+                row = conn.execute("SELECT * FROM user_stats WHERE user_id IS NULL OR user_id = 0 LIMIT 1").fetchone()
+                if row:
+                    return dict(row)
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO user_stats (user_id, xp_total, level, streak_days, gems, tasks_pending, focus_minutes_total, last_active_date)
+                    VALUES (NULL, 0, 1, 0, 0, 0, 0, DATE('now'))
+                    """
+                )
+                conn.commit()
+                return {
+                    "id": cursor.lastrowid,
+                    "user_id": None,
+                    "xp_total": 0,
+                    "level": 1,
+                    "streak_days": 0,
+                    "gems": 0,
+                    "tasks_pending": 0,
+                    "focus_minutes_total": 0,
+                }
+        finally:
+            conn.close()
 
     @staticmethod
-    def add_xp(xp_to_add):
-        stats = UserStatsModel.get()
+    def add_xp(xp_to_add, user_id=None):
+        stats = UserStatsModel.get(user_id=user_id)
         new_xp = stats.get("xp_total", 0) + xp_to_add
-        # Level formula: Level 1 starts at 0, each level requires 1000 XP
         new_level = max(1, (new_xp // 1000) + 1)
+        
         conn = get_db_connection()
-        conn.execute(
-            "UPDATE user_stats SET xp_total = ?, level = ? WHERE id = 1",
-            (new_xp, new_level),
-        )
-        conn.commit()
-        conn.close()
-        return {"xp_total": new_xp, "level": new_level}
+        try:
+            if user_id is not None and user_id != 0:
+                conn.execute(
+                    "UPDATE user_stats SET xp_total = ?, level = ? WHERE user_id = ?",
+                    (new_xp, new_level, user_id),
+                )
+            else:
+                stat_id = stats.get("id")
+                if stat_id:
+                    conn.execute(
+                        "UPDATE user_stats SET xp_total = ?, level = ? WHERE id = ?",
+                        (new_xp, new_level, stat_id),
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE user_stats SET xp_total = ?, level = ? WHERE user_id IS NULL OR user_id = 0 OR rowid = 1",
+                        (new_xp, new_level),
+                    )
+            conn.commit()
+            return {"xp_total": new_xp, "level": new_level}
+        finally:
+            conn.close()
 
 
 class NoteModel:
     @staticmethod
-    def create(title, content, tags="General", document_id=None):
+    def create(title, content, tags="General", document_id=None, user_id=None):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO notebook (title, content, tags, document_id) VALUES (?, ?, ?, ?)",
-            (title, content, tags, document_id),
+            "INSERT INTO notebook (title, content, tags, document_id, user_id) VALUES (?, ?, ?, ?, ?)",
+            (title, content, tags, document_id, user_id),
         )
         note_id = cursor.lastrowid
         conn.commit()
@@ -356,9 +461,12 @@ class NoteModel:
         return note_id
 
     @staticmethod
-    def get_all():
+    def get_all(user_id=None):
         conn = get_db_connection()
-        rows = conn.execute("SELECT * FROM notebook ORDER BY updated_at DESC").fetchall()
+        if user_id is not None:
+            rows = conn.execute("SELECT * FROM notebook WHERE user_id = ? ORDER BY updated_at DESC", (user_id,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM notebook ORDER BY updated_at DESC").fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
@@ -391,6 +499,8 @@ class UserModel:
             )
             user_id = cursor.lastrowid
             conn.commit()
+            # Initialize clean zero-stat row for new user
+            UserStatsModel.get(user_id=user_id)
             return {"success": True, "user_id": user_id, "name": name, "username": username}
         except Exception as e:
             err = str(e)
@@ -433,8 +543,11 @@ class UserModel:
     @staticmethod
     def seed_default_user():
         conn = get_db_connection()
-        count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-        conn.close()
-        if count == 0:
-            UserModel.create_user("Tan", "tan", "tan@studyforge.ai", "password123")
-
+        try:
+            count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            if count == 0:
+                res = UserModel.create_user("Tan", "tan", "tan@studyforge.ai", "password123")
+                if res.get("success"):
+                    UserStatsModel.get(user_id=res["user_id"])
+        finally:
+            conn.close()

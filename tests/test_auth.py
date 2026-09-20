@@ -7,6 +7,11 @@ from gui.main_window import MainWindow
 @pytest.fixture(autouse=True)
 def setup():
     init_db()
+    from database.connection import get_db_connection
+    conn = get_db_connection()
+    conn.execute("DELETE FROM users WHERE username IN ('alice', 'alice2') OR email IN ('alice@example.com', 'alice2@example.com')")
+    conn.commit()
+    conn.close()
 
 def test_user_registration_and_authentication():
     # 1. Register new user

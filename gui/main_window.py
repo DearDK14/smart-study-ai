@@ -54,7 +54,7 @@ class MainWindow(ctk.CTk):
 
         if start_authenticated:
             # For direct testing
-            self._on_auth_success({"name": "Tan", "username": "tan", "is_guest": False})
+            self._on_auth_success({"id": 1, "name": "Tan", "username": "tan", "is_guest": False})
         else:
             # Show Landing Home Screen with Login / Register / Guest Mode
             self.show_auth_screen()
@@ -107,23 +107,23 @@ class MainWindow(ctk.CTk):
             on_logout=self.logout,
         )
         self.header.grid(row=0, column=0, sticky="ew")
-        self.header.set_user_name(user.get("name", "Student"))
+        self.header.set_user(user)
 
         self.content_area = ctk.CTkFrame(self.right_container, fg_color="transparent")
         self.content_area.grid(row=1, column=0, sticky="nsew", padx=4, pady=4)
         self.content_area.grid_rowconfigure(0, weight=1)
         self.content_area.grid_columnconfigure(0, weight=1)
 
-        # View Factories
+        # View Factories - Scoped with current user state
         self.view_factories = {
-            "Dashboard": lambda: DashboardView(self.content_area, navigate_fn=self.navigate),
-            "My Documents": lambda: DocumentsView(self.content_area, navigate_fn=self.navigate),
-            "AI Summaries": lambda: SummariesView(self.content_area, navigate_fn=self.navigate),
-            "Question Generator": lambda: QuestionsView(self.content_area, navigate_fn=self.navigate),
-            "Quiz": lambda: QuizView(self.content_area, navigate_fn=self.navigate, on_stats_updated=self.header.update_user_stats),
-            "Flashcards": lambda: FlashcardsView(self.content_area, navigate_fn=self.navigate, on_stats_updated=self.header.update_user_stats),
-            "My Notebook": lambda: NotebookView(self.content_area, navigate_fn=self.navigate),
-            "Analytics": lambda: AnalyticsView(self.content_area, navigate_fn=self.navigate),
+            "Dashboard": lambda: DashboardView(self.content_area, navigate_fn=self.navigate, user=self.current_user),
+            "My Documents": lambda: DocumentsView(self.content_area, navigate_fn=self.navigate, user=self.current_user, on_stats_updated=self.header.update_user_stats),
+            "AI Summaries": lambda: SummariesView(self.content_area, navigate_fn=self.navigate, user=self.current_user),
+            "Question Generator": lambda: QuestionsView(self.content_area, navigate_fn=self.navigate, user=self.current_user),
+            "Quiz": lambda: QuizView(self.content_area, navigate_fn=self.navigate, on_stats_updated=self.header.update_user_stats, user=self.current_user),
+            "Flashcards": lambda: FlashcardsView(self.content_area, navigate_fn=self.navigate, on_stats_updated=self.header.update_user_stats, user=self.current_user),
+            "My Notebook": lambda: NotebookView(self.content_area, navigate_fn=self.navigate, user=self.current_user),
+            "Analytics": lambda: AnalyticsView(self.content_area, navigate_fn=self.navigate, user=self.current_user),
             "Settings": lambda: SettingsView(self.content_area, navigate_fn=self.navigate, on_theme_toggle=self._on_theme_toggle),
         }
 

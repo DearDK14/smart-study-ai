@@ -6,10 +6,12 @@ from database.models import QuizModel, QuestionModel
 from services.question_service import QuestionService
 
 class QuizView(ctk.CTkScrollableFrame):
-    def __init__(self, master, navigate_fn, on_stats_updated=None, **kwargs):
+    def __init__(self, master, navigate_fn, on_stats_updated=None, user=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.navigate_fn = navigate_fn
         self.on_stats_updated = on_stats_updated
+        self.user = user or {}
+        self.user_id = self.user.get("id")
 
         self.current_quiz = None
         self.questions = []
@@ -30,7 +32,7 @@ class QuizView(ctk.CTkScrollableFrame):
         self.top_row = ctk.CTkFrame(self.top_card, fg_color="transparent")
         self.top_row.pack(fill="x", padx=20, pady=16)
 
-        self.quizzes = QuizModel.get_all()
+        self.quizzes = QuizModel.get_all(user_id=self.user_id)
         self.quiz_map = {q["id"]: q["title"] for q in self.quizzes}
         quiz_titles = [q["title"] for q in self.quizzes] if self.quizzes else ["No quizzes available"]
 
@@ -102,7 +104,7 @@ class QuizView(ctk.CTkScrollableFrame):
 
         self.q_text_label = ctk.CTkLabel(
             self.quiz_card,
-            text="Question text will appear here...",
+            text="Upload a study document to automatically create a quiz!",
             font=FONTS["header"],
             text_color=(COLORS["text_dark"], COLORS["text_light"]),
             wraplength=720,
@@ -261,8 +263,8 @@ class QuizView(ctk.CTkScrollableFrame):
             if not messagebox.askyesno("Unanswered Questions", f"You have {unanswered} unanswered question(s). Submit anyway?"):
                 return
 
-        # Evaluate submission
-        res = QuestionService.evaluate_quiz_submission(self.current_quiz["id"], self.user_answers)
+        # Evaluate submission with user_id
+        res = QuestionService.evaluate_quiz_submission(self.current_quiz["id"], self.user_answers, user_id=self.user_id)
         if not res.get("success"):
             messagebox.showerror("Error", "Failed to grade quiz.")
             return

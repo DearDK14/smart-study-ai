@@ -7,10 +7,12 @@ from database.models import FlashcardModel, DocumentModel
 from services.flashcard_service import FlashcardService
 
 class FlashcardsView(ctk.CTkScrollableFrame):
-    def __init__(self, master, navigate_fn, on_stats_updated=None, **kwargs):
+    def __init__(self, master, navigate_fn, on_stats_updated=None, user=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.navigate_fn = navigate_fn
         self.on_stats_updated = on_stats_updated
+        self.user = user or {}
+        self.user_id = self.user.get("id")
 
         self.cards = []
         self.current_idx = 0
@@ -29,7 +31,7 @@ class FlashcardsView(ctk.CTkScrollableFrame):
         self.top_row = ctk.CTkFrame(self.top_card, fg_color="transparent")
         self.top_row.pack(fill="x", padx=20, pady=16)
 
-        self.decks = FlashcardModel.get_decks()
+        self.decks = FlashcardModel.get_decks(user_id=self.user_id)
         deck_names = [d["deck_name"] for d in self.decks] if self.decks else ["No decks available"]
 
         self.deck_lbl = ctk.CTkLabel(self.top_row, text="Select Deck:", font=FONTS["body_bold"])
@@ -97,7 +99,7 @@ class FlashcardsView(ctk.CTkScrollableFrame):
         # Central Card Text
         self.card_text = ctk.CTkLabel(
             self.card_container,
-            text="Select or generate a flashcard deck to begin active recall.",
+            text="Upload a document to automatically create your flashcard study deck.",
             font=("Segoe UI", 16, "bold"),
             text_color=(COLORS["text_dark"], COLORS["text_light"]),
             wraplength=680,
@@ -212,7 +214,6 @@ class FlashcardsView(ctk.CTkScrollableFrame):
         )
         self.easy_btn.grid(row=0, column=2, padx=4, sticky="ew")
 
-        # Load initial deck if exists
         if self.decks:
             self._load_deck(self.decks[0]["deck_name"])
 
@@ -220,7 +221,7 @@ class FlashcardsView(ctk.CTkScrollableFrame):
         self._load_deck(deck_name)
 
     def _load_deck(self, deck_name: str):
-        self.cards = FlashcardModel.get_by_deck(deck_name)
+        self.cards = FlashcardModel.get_by_deck(deck_name, user_id=self.user_id)
         self.current_idx = 0
         self.is_flipped = False
         self._render_card()
@@ -269,7 +270,7 @@ class FlashcardsView(ctk.CTkScrollableFrame):
         if not self.cards:
             return
         card = self.cards[self.current_idx]
-        FlashcardService.record_card_review(card["id"], mastery_level)
+        FlashcardService.record_card_review(card["id"], mastery_level, user_id=self.user_id)
         if self.on_stats_updated:
             self.on_stats_updated()
         # Automatically advance to next card
@@ -277,7 +278,7 @@ class FlashcardsView(ctk.CTkScrollableFrame):
             self._next_card()
 
     def _open_generator_dialog(self):
-        docs = DocumentModel.get_all()
+        docs = DocumentModel.get_all(user_id=self.user_id)
         if not docs:
             messagebox.showwarning("Warning", "Please upload a study document first before generating flashcards!")
             return
@@ -312,14 +313,14 @@ class FlashcardsView(ctk.CTkScrollableFrame):
         btn.pack(anchor="w", padx=24, pady=16)
 
     def _generate_cards_worker(self, doc_id: int, deck_name: str):
-        res = FlashcardService.generate_flashcards_for_document(doc_id, deck_name=deck_name, count=6)
+        res = FlashcardService.generate_flashcards_for_document(doc_id, deck_name=deck_name, count=6, user_id=self.user_id)
         if res.get("success"):
             self.after(0, lambda: self._on_deck_generated(deck_name))
         else:
             self.after(0, lambda: messagebox.showerror("Error", res.get("error", "Failed to generate deck.")))
 
     def _on_deck_generated(self, deck_name: str):
-        self.decks = FlashcardModel.get_decks()
+        self.decks = FlashcardModel.get_decks(user_id=self.user_id)
         deck_names = [d["deck_name"] for d in self.decks]
         self.deck_dropdown.configure(values=deck_names)
         self.deck_dropdown.set(deck_name)

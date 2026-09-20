@@ -5,9 +5,11 @@ from database.models import QuizAttemptModel, DocumentModel, FlashcardModel, Use
 from config.settings import WEAK_TOPIC_ACCURACY_THRESHOLD
 
 class AnalyticsView(ctk.CTkScrollableFrame):
-    def __init__(self, master, navigate_fn, **kwargs):
+    def __init__(self, master, navigate_fn, user=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.navigate_fn = navigate_fn
+        self.user = user or {}
+        self.user_id = self.user.get("id")
 
         # 1. Top Diagnostic Header Card
         self.header_card = ctk.CTkFrame(
@@ -40,20 +42,21 @@ class AnalyticsView(ctk.CTkScrollableFrame):
         self.metrics_frame.pack(fill="x", padx=16, pady=(0, 16))
         self.metrics_frame.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="analytics_metric")
 
-        attempts = QuizAttemptModel.get_all()
-        docs = DocumentModel.get_all()
-        cards = FlashcardModel.get_all()
-        stats = UserStatsModel.get()
+        attempts = QuizAttemptModel.get_all(user_id=self.user_id)
+        docs = DocumentModel.get_all(user_id=self.user_id)
+        cards = FlashcardModel.get_all(user_id=self.user_id)
+        stats = UserStatsModel.get(user_id=self.user_id)
 
         total_quizzes = len(attempts)
         avg_score = round(sum(a["percentage"] for a in attempts) / total_quizzes, 1) if total_quizzes > 0 else 0.0
-        total_xp = stats.get("xp_total", 11735)
+        total_xp = stats.get("xp_total", 0)
+        user_level = stats.get("level", 1)
         reviewed_cards = sum(c.get("reviews_count", 0) for c in cards)
 
         self._create_stat_card(0, "Quizzes Completed", str(total_quizzes), "Total Attempts", COLORS["primary"])
         self._create_stat_card(1, "Average Score", f"{avg_score}%", "Overall Accuracy", "#059669")
         self._create_stat_card(2, "Flashcards Reviewed", str(reviewed_cards), "Active Recall Hits", "#d97706")
-        self._create_stat_card(3, "Total XP Earned", f"{total_xp:,} ⚡", f"Level {stats.get('level', 11)}", "#7c3aed")
+        self._create_stat_card(3, "Total XP Earned", f"{total_xp:,} ⚡", f"Level {user_level}", "#7c3aed")
 
         # 3. Weak Topics Priority Card
         self.weak_card = ctk.CTkFrame(
