@@ -1,5 +1,13 @@
 """Smart Study AI (StudyGenius) - Main Application Router."""
+import sys
 import streamlit as st
+
+# Automatically detect if executed via `python app.py` (e.g. VS Code Run Button)
+# and seamlessly bootstrap the Streamlit server runtime
+if not st.runtime.exists():
+    from streamlit.web import cli as stcli
+    sys.argv = ["streamlit", "run", __file__]
+    sys.exit(stcli.main())
 
 # Streamlit Page Configuration must be the first Streamlit command
 st.set_page_config(
