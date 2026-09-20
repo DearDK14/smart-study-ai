@@ -368,3 +368,73 @@ class NoteModel:
         conn.execute("DELETE FROM notebook WHERE id = ?", (note_id,))
         conn.commit()
         conn.close()
+
+
+class UserModel:
+    @staticmethod
+    def _hash_password(password: str) -> str:
+        import hashlib
+        return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def create_user(name: str, username: str, email: str, password: str):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        pwd_hash = UserModel._hash_password(password)
+        try:
+            cursor.execute(
+                """
+                INSERT INTO users (name, username, email, password_hash)
+                VALUES (?, ?, ?, ?)
+                """,
+                (name.strip(), username.strip().lower(), email.strip().lower(), pwd_hash),
+            )
+            user_id = cursor.lastrowid
+            conn.commit()
+            return {"success": True, "user_id": user_id, "name": name, "username": username}
+        except Exception as e:
+            err = str(e)
+            if "UNIQUE constraint failed" in err:
+                if "username" in err:
+                    return {"success": False, "error": "Username is already registered."}
+                elif "email" in err:
+                    return {"success": False, "error": "Email is already registered."}
+            return {"success": False, "error": f"Failed to register user: {err}"}
+        finally:
+            conn.close()
+
+    @staticmethod
+    def authenticate(username_or_email: str, password: str):
+        conn = get_db_connection()
+        ident = username_or_email.strip().lower()
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ? OR email = ?",
+            (ident, ident),
+        ).fetchone()
+        conn.close()
+
+        if not row:
+            return {"success": False, "error": "User account not found."}
+
+        pwd_hash = UserModel._hash_password(password)
+        if row["password_hash"] != pwd_hash:
+            return {"success": False, "error": "Invalid password."}
+
+        return {
+            "success": True,
+            "user": {
+                "id": row["id"],
+                "name": row["name"],
+                "username": row["username"],
+                "email": row["email"],
+            },
+        }
+
+    @staticmethod
+    def seed_default_user():
+        conn = get_db_connection()
+        count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        conn.close()
+        if count == 0:
+            UserModel.create_user("Tan", "tan", "tan@studyforge.ai", "password123")
+

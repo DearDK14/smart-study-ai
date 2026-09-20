@@ -27,6 +27,12 @@ def init_db():
     finally:
         conn.close()
 
+    try:
+        from database.models import UserModel
+        UserModel.seed_default_user()
+    except Exception:
+        pass
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully at", DATABASE_PATH)

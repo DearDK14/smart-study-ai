@@ -3,7 +3,7 @@ import pytest
 from gui.main_window import MainWindow
 
 def test_gui_window_and_navigation():
-    app = MainWindow()
+    app = MainWindow(start_authenticated=True)
     app.withdraw()  # Keep hidden during automated test run
 
     pages = [

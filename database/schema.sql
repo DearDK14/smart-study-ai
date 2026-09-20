@@ -1,4 +1,13 @@
--- Schema for Smart Study AI (StudyGenius)
+-- Schema for StudyForge AI (Smart Study AI)
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,7 +52,7 @@ CREATE TABLE IF NOT EXISTS quizzes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     document_id INTEGER,
-    question_ids_json TEXT NOT NULL, -- JSON array of question IDs
+    question_ids_json TEXT NOT NULL,
     total_questions INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE SET NULL
@@ -55,8 +64,8 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
     score INTEGER NOT NULL,
     total_questions INTEGER NOT NULL,
     percentage REAL NOT NULL,
-    answers_json TEXT NOT NULL, -- Detailed breakdown per question
-    weak_topics_json TEXT,       -- Detected weak topics from this run
+    answers_json TEXT NOT NULL,
+    weak_topics_json TEXT,
     xp_earned INTEGER DEFAULT 0,
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (quiz_id) REFERENCES quizzes (id) ON DELETE SET NULL
@@ -69,7 +78,7 @@ CREATE TABLE IF NOT EXISTS flashcards (
     topic TEXT NOT NULL DEFAULT 'General',
     front_text TEXT NOT NULL,
     back_text TEXT NOT NULL,
-    mastery_level TEXT DEFAULT 'learning', -- 'learning', 'reviewing', 'mastered'
+    mastery_level TEXT DEFAULT 'learning',
     reviews_count INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE SET NULL
@@ -98,6 +107,6 @@ CREATE TABLE IF NOT EXISTS notebook (
     FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE SET NULL
 );
 
--- Insert default user stats if not exists (matching the StudyGenius screenshot)
+-- Default user stats
 INSERT OR IGNORE INTO user_stats (id, xp_total, level, streak_days, gems, tasks_pending, focus_minutes_total, last_active_date)
 VALUES (1, 11735, 11, 1, 250, 1, 120, DATE('now'));

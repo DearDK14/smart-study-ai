@@ -4,7 +4,7 @@ from gui.theme import COLORS, FONTS
 from database.models import UserStatsModel
 
 class Header(ctk.CTkFrame):
-    def __init__(self, master, on_theme_toggle=None, **kwargs):
+    def __init__(self, master, on_theme_toggle=None, on_logout=None, **kwargs):
         super().__init__(
             master,
             fg_color=(COLORS["header_light"], COLORS["header_dark"]),
@@ -16,6 +16,7 @@ class Header(ctk.CTkFrame):
         )
         self.pack_propagate(False)
         self.on_theme_toggle = on_theme_toggle
+        self.on_logout = on_logout
         
         # Left side: Current Page Title & Subtitle
         self.left_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -37,20 +38,34 @@ class Header(ctk.CTkFrame):
         )
         self.subtitle_label.pack(side="top", anchor="w")
 
-        # Right side: XP pill, Level badge, User avatar, Theme toggle
+        # Right side: Logout, Theme toggle, User avatar, Level badge, XP pill
         self.right_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.right_frame.pack(side="right", fill="y", padx=24)
+        self.right_frame.pack(side="right", fill="y", padx=20)
+
+        # Logout Button
+        self.logout_btn = ctk.CTkButton(
+            self.right_frame,
+            text="🚪 Logout",
+            width=76,
+            height=32,
+            font=FONTS["small"],
+            fg_color=(COLORS["danger_light"], "#7f1d1d"),
+            text_color=COLORS["danger"],
+            hover_color=COLORS["danger"],
+            command=self._handle_logout,
+        )
+        self.logout_btn.pack(side="right", padx=(12, 0), pady=16)
 
         # Theme Switcher
         self.theme_switch = ctk.CTkSwitch(
             self.right_frame,
-            text="Dark Mode",
+            text="Dark",
             font=FONTS["small"],
             command=self._handle_theme_toggle,
-            width=50,
+            width=46,
             progress_color=COLORS["primary"],
         )
-        self.theme_switch.pack(side="right", padx=(12, 0), pady=18)
+        self.theme_switch.pack(side="right", padx=(10, 0), pady=18)
 
         # User Avatar Pill
         self.user_pill = ctk.CTkFrame(
@@ -115,6 +130,14 @@ class Header(ctk.CTkFrame):
             self.level_label.configure(text=f"⭐ Level {level}")
         except Exception:
             pass
+
+    def set_user_name(self, name: str):
+        """Update user avatar pill with logged in user name."""
+        self.avatar_label.configure(text=f" 👤 {name} ")
+
+    def _handle_logout(self):
+        if self.on_logout:
+            self.on_logout()
 
     def _handle_theme_toggle(self):
         is_dark = self.theme_switch.get() == 1
