@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Data and uploads
+uploads/*
+!uploads/.gitkeep
+data/*.db
+data/*.sqlite
+!data/.gitkeep
+
+# Environment
+.env
+
+# Streamlit
+.streamlit/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
