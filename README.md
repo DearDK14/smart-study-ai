@@ -1,170 +1,165 @@
-# 🎓 StudyGenius • Smart Study AI
+# ⚡ StudyForge AI • Modern Student Learning OS
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Framework: Streamlit](https://img.shields.io/badge/framework-Streamlit-red.svg)](https://streamlit.io/)
+[![GUI: CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter%206.0-0284c7.svg)](https://customtkinter.tomschimansky.com/)
 [![Database: SQLite](https://img.shields.io/badge/database-SQLite-003B57.svg)](https://www.sqlite.org/)
-[![Tests: Pytest](https://img.shields.io/badge/tests-15%20passed-brightgreen.svg)](https://docs.pytest.org/)
-[![CodeMyFYP Hack 26](https://img.shields.io/badge/Hackathon-CodeMyFYP%20Hack%2026-purple.svg)](https://hackathon.codemyfyp.com)
+[![Tests: Pytest](https://img.shields.io/badge/tests-16%20passed-brightgreen.svg)](https://docs.pytest.org/)
+[![Theme: Light Blue & White](https://img.shields.io/badge/theme-Light%20Blue%20%26%20White-sky.svg)](https://customtkinter.tomschimansky.com/)
 
-An AI-powered academic learning operating system that turns dense textbooks, lecture notes, and syllabi into executive summaries, interactive quizzes, 3D flashcard decks, and weak-topic learning analytics.
+**StudyForge AI** is a modern, responsive Python desktop application designed for students and educators. Built with **CustomTkinter**, it converts dense lecture notes and textbook PDFs into structured executive summaries, multiple-choice quiz assessments, 3D study flashcards, personal study notes, and diagnostic weak-topic learning analytics.
 
 ---
 
-## 🌟 Key Features & Architecture
+## 🌟 Key Features
 
-### 1. 🔍 Framework & Architecture Audit
-- **Core Framework**: **Streamlit** (Python) with a custom modern CSS design system matching the **StudyGenius** macOS purple-dashboard aesthetic.
-- **Database**: Thread-safe **SQLite** persistent storage (`data/study_genius.db`) with normalized models for documents, summaries, question banks, quizzes, attempts, flashcard decks, and gamified XP stats.
-- **AI Pipeline**: Dual-mode engine:
-  - **Online**: Google Gemini API (`gemini-1.5-flash`) via `google-genai`.
-  - **Offline Fallback**: Built-in heuristic NLP processor (TF/statistical keyword extractor, semantic summarizer, distractor generator) ensuring the application is **100% functional out of the box** even without an API key.
+### 1. 🖥️ Modern Desktop GUI (CustomTkinter)
+- **Design Style**: Sleek light-blue and white card interface (`#0284c7`, `#e0f2fe`, `#ffffff`) with rounded cards, smooth hover states, and native Dark Mode support.
+- **Single Window Architecture**: Left sidebar navigation, responsive top header with live XP and Level badges, and dynamic content frames that switch smoothly without popup clutter.
+- **Asynchronous Threading**: AI processing and document extractions run in dedicated background threads (`threading.Thread`) so the user interface never freezes.
 
 ### 2. 📚 Document Management & PDF Extraction
-- High-fidelity PDF document parser powered by `pypdf`.
-- Supports PDF, TXT, and Markdown documents up to 25MB.
+- Powered by `pypdf` with support for `.pdf`, `.txt`, and `.md` files up to 25MB.
 - Automatic page-by-page extraction, word count computation, and estimated reading time calculation.
+- Built-in document viewer with full extracted text inspection and safe deletion.
 
 ### 3. 📑 AI Summaries & Content Pipeline
-- Generates structured Executive Summaries and bulleted high-yield exam takeaways.
-- Automated Key Concepts glossary generation.
-- Awards study XP for engaging with course materials.
+- Synthesizes comprehensive Executive Summaries, high-yield exam crams, and concept glossaries.
+- Dual-engine architecture:
+  - **Online**: Google Gemini API (`gemini-1.5-flash`).
+  - **Offline Local NLP**: Built-in statistical term extractor and heuristic synthesizer that **works 100% offline with zero API key**.
+- One-click copy to clipboard and SQLite history log.
 
-### 4. 📝 Interactive Quiz Studio & Assessment
-- Multiple-choice questions with 4 distinct options, explanations, and topic categorization.
-- Real-time instant grading with celebratory feedback and detailed rationale.
+### 4. ❓ Question Generator & Question Bank
+- Customizable question generation: choose difficulty (*Easy*, *Medium*, *Hard*) and question count (3 to 12).
+- Automatic distractor formulation, correct answer keys, and pedagogical explanations.
+- Searchable Question Bank with direct links to assessment mode.
 
-### 5. 🗂️ 3D Animated Flashcards & Spaced Repetition
-- Dynamic flashcard decks generated from uploaded documents.
-- Interactive front/back flip cards with self-rated recall ("Hard", "Medium", "Mastered") for active recall reinforcement.
+### 5. 📝 Interactive Quiz Assessment
+- Full multiple-choice testing interface with radio options (A, B, C, D) and progress bar.
+- Instant automated scoring, question-by-question review, and celebratory feedback.
+- Automated **Weak Topics Diagnostic**: identifies subjects with $<60\%$ accuracy from real student answers.
 
-### 6. 📈 Weak Topics Diagnostic & Learning Analytics
-- Aggregates actual student quiz submissions across specific topics.
-- Automatically flags **Weak Topics** ($<60\%$ accuracy threshold) to guide exam revision.
-- Interactive Plotly charts displaying mastery distribution, XP velocity, and full attempt history.
+### 6. 🗂️ Interactive Study Flashcards
+- 3D-styled flip cards with front concept/question and back definition/answer.
+- Spaced repetition recall ratings (*Hard*, *Medium*, *Mastered*) that award XP and update mastery tracking in SQLite.
+
+### 7. 📓 Personal Study Notebook
+- Rich note creator with title, content, tags, and document linking.
+- Real-time search filter and instant note deletion.
+
+### 8. 📈 Diagnostic Learning Analytics
+- Analyzes actual quiz attempt history from SQLite.
+- Categorizes topics into Strong vs Weak ($<60\%$ accuracy).
+- Progress bar visualizer for topic mastery and full quiz attempt log.
+
+### 9. ⚙️ Settings & Theme Customization
+- One-click Light / Dark / System theme switching.
+- Gemini API key manager with live online/offline engine status.
+- Safe database reset tool with confirmation dialog.
 
 ---
 
-## 📁 Repository Structure
+## 📁 Project Architecture
 
 ```text
 Hack 26/
-│
-├── app.py                     # Main application entry point & router
-├── requirements.txt           # Project dependencies
+├── app.py                     # Main application entry point (launches Desktop GUI)
+├── requirements.txt           # Python package dependencies
 ├── .env                       # Environment variables (API keys)
 ├── .env.example               # Template environment configuration
-├── .gitignore                 # Ignored files and directories
+├── .gitignore                 # Version control exclusions
 ├── README.md                  # Comprehensive documentation
 │
-├── config/
-│   ├── __init__.py
-│   └── settings.py            # App settings, paths, thresholds
+├── gui/                       # CustomTkinter Desktop GUI Framework
+│   ├── __init__.py            # GUI package exports
+│   ├── main_window.py         # Main CTk root window & page router
+│   ├── theme.py               # Palette tokens, typography, CTk theme setup
+│   ├── sidebar.py             # Left navigation sidebar
+│   ├── header.py              # Top header with XP pill, level, user badge
+│   ├── dashboard_view.py      # Student dashboard view
+│   ├── documents_view.py      # PDF/document upload & manager view
+│   ├── summaries_view.py      # AI summaries view
+│   ├── questions_view.py      # Question generator view
+│   ├── quiz_view.py           # Interactive quiz player view
+│   ├── flashcards_view.py     # Flashcards study view
+│   ├── notebook_view.py       # Personal notebook view
+│   ├── analytics_view.py      # Weak topics & learning analytics view
+│   └── settings_view.py       # Settings & theme configuration view
 │
-├── database/
+├── database/                  # SQLite Persistent Storage
 │   ├── __init__.py
-│   ├── connection.py          # SQLite connection and initialization
-│   ├── models.py              # CRUD models for documents, quizzes, flashcards
-│   └── schema.sql             # Relational database schema
+│   ├── connection.py          # SQLite connection manager
+│   ├── models.py              # CRUD models for documents, quizzes, flashcards, stats
+│   └── schema.sql             # Relational schema
 │
-├── services/
+├── services/                  # Business Logic & AI Engines
 │   ├── __init__.py
-│   ├── ai_service.py          # Dual AI engine (Gemini + Local NLP fallback)
+│   ├── ai_service.py          # Gemini API + Local Heuristic NLP fallback
 │   ├── pdf_service.py         # PDF text extraction and document parsing
 │   ├── summary_service.py     # Summary generation and persistence
 │   ├── question_service.py    # MCQ generation, grading, weak topic analysis
 │   └── flashcard_service.py   # Flashcard generation and mastery tracking
 │
-├── pages/
+├── config/
 │   ├── __init__.py
-│   ├── dashboard.py           # StudyGenius dashboard with XP & stat cards
-│   ├── documents.py           # Document upload & text extraction
-│   ├── summaries.py           # AI summaries studio
-│   ├── questions.py           # Question generation & Question Bank
-│   ├── quiz.py                # Interactive quiz testing
-│   ├── flashcards.py          # 3D flip study flashcards
-│   ├── notebook.py            # Student study notes
-│   ├── analytics.py           # Weak topics diagnosis & charts
-│   └── settings.py            # System settings & API key manager
-│
-├── components/
-│   ├── __init__.py
-│   ├── sidebar.py             # Navigation sidebar matching design
-│   ├── cards.py               # Metric cards, action buttons, flashcard widget
-│   └── styles.py              # Custom CSS matching StudyGenius mockup
+│   └── settings.py            # App settings, paths, thresholds
 │
 ├── utils/
 │   ├── __init__.py
 │   ├── validators.py          # File and data schema validation
-│   └── helpers.py             # Text cleaning, XP math, file formatting
+│   └── helpers.py             # Text processing, reading time, XP math
 │
-├── tests/
+├── tests/                     # Automated Test Suite (Pytest)
 │   ├── __init__.py
-│   ├── test_database.py       # Database CRUD unit tests
-│   ├── test_pdf_service.py    # PDF extraction unit tests
+│   ├── test_database.py       # Database CRUD tests
+│   ├── test_pdf_service.py    # PDF text extraction tests
 │   ├── test_quiz.py           # Quiz grading & weak topic detection tests
-│   └── test_validators.py     # Input validator unit tests
+│   ├── test_validators.py     # Input validation tests
+│   └── test_gui_navigation.py # CustomTkinter GUI startup & navigation tests
 │
 ├── data/
 │   └── .gitkeep               # SQLite database directory
-│
 └── uploads/
+    ├── .gitkeep
     └── biology_cellular_respiration.txt  # Sample study materials
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Installation & Running
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/DearDK14/smart-study-ai.git
-cd smart-study-ai
-```
-
-### 2. Install Dependencies
+### 1. Install Dependencies
+Ensure Python 3.10+ is installed, then run:
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. (Optional) Configure Gemini API Key
-Create or update `.env`:
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-> *Note: If no API key is provided, the platform automatically runs on the built-in offline Local NLP Engine!*
-
-### 4. Launch the Application
+### 2. Launch the Desktop Application
+Run the main application script:
 ```bash
+python app.py
+```
+The **StudyForge AI** desktop window will open immediately!
+
+*(Optional) To launch the Streamlit web dashboard instead:*
+```bash
+python app.py --web
+# or
 streamlit run app.py
 ```
-Open your browser at `http://localhost:8501`.
 
 ---
 
 ## 🧪 Running Automated Tests
 
-Run the full automated test suite covering database models, PDF extraction, quiz grading, and weak topic analytics:
-
+Run the full Pytest test suite:
 ```bash
-pytest tests/ -v
+python -m pytest tests/ -v
 ```
-
-All 15 test cases pass out-of-the-box!
-
----
-
-## 🌐 Live Demo & Deployment Guide
-
-### Deploying to Streamlit Community Cloud (1-Click Free Hosting)
-1. Push your repository to GitHub: `https://github.com/DearDK14/smart-study-ai`.
-2. Visit [share.streamlit.io](https://share.streamlit.io).
-3. Connect your GitHub account and select repository `DearDK14/smart-study-ai`.
-4. Set Main file path to `app.py`.
-5. Under **Advanced settings**, add your `GEMINI_API_KEY` (optional).
-6. Click **Deploy!**
+**Result**: 16/16 test cases passing!
 
 ---
 
-## 👨‍💻 Author
-- **Team**: DearDK14
-- **Hackathon**: CodeMyFYP Hack 26
+## 👨‍💻 Author & Credits
+- **Project**: StudyForge AI (Hack 26 Edition)
+- **Repository**: [https://github.com/DearDK14/smart-study-ai](https://github.com/DearDK14/smart-study-ai)
